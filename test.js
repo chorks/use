@@ -151,19 +151,47 @@ describe('use', function() {
     var app = {};
     use(app);
     app.use(function(ctx) {
-      return function() {}
+      return function() {};
     });
     app.use(function(ctx) {
-      return function() {}
+      return function() {};
     });
     app.use(function(ctx) {
-      return function() {}
+      return function() {};
     });
     assert(app.fns.length === 3);
   });
+
+  it('should not call functions from `fns` immediately, only when `.run` is called', function() {
+    var app = {};
+    var count = 0;
+    use(app);
+    app.use(function(ctx) {
+      count++;
+      return function() {
+        count++;
+      };
+    });
+    app.use(function(ctx) {
+      count++;
+      return function() {
+        count++;
+      };
+    });
+    app.use(function(ctx) {
+      count++
+      return function() {
+        count++;
+      };
+    });
+    assert.strictEqual(app.fns.length, 3);
+    assert.strictEqual(count, 3);
+    app.run(123);
+    assert.strictEqual(count, 6);
+  });
 });
 
-describe('run', function() {
+describe('.run', function() {
   it('should decorate "run" onto the given object', function() {
     var app = {};
     use(app);
