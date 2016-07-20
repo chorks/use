@@ -189,6 +189,31 @@ describe('use', function() {
     app.run(123);
     assert.strictEqual(count, 6);
   });
+
+  it.skip('should work with infinite nesting', function() {
+    var app = {};
+    var count = 0;
+    use(app);
+
+    app.use(function (app) {
+      count++;
+      return function fn (abc) {
+        count++;
+        return function alpha (abc) {
+          count++;
+          return function beta (abc) {
+            count++;
+            return function plugin (abc) {
+              count++;
+            };
+          };
+        };
+      };
+    });
+    var foo = {};
+    app.run(foo);
+    assert.strictEqual(count, 5);
+  });
 });
 
 describe('.run', function() {
