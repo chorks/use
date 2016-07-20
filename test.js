@@ -8,7 +8,7 @@ var extend = require('extend-shallow');
 
 describe('use', function() {
   it('should export a function', function() {
-    assert.equal(typeof use, 'function');
+    assert.strictEqual(typeof use, 'function');
   });
 
   it('should throw TypeError `app` not a function or object', function() {
@@ -73,10 +73,38 @@ describe('use', function() {
       }, { ccc: 'ddd' });
   });
 
+  it('should be able to pass `opts.params` for top plugin', function () {
+    var limon = { foo: 'bar' };
+    use(limon, {
+      params: [111, 222, limon]
+    });
+
+    // these arguments comes from `opts.params`
+    limon.use(function (one, two, app) {
+      assert.strictEqual(one, 111);
+      assert.strictEqual(two, 222);
+      assert.strictEqual(app.foo, 'bar');
+      assert.strictEqual(this.foo, 'bar');
+      this.one = one
+
+      // these arguments comes from `.run`
+      return function (aa, bb, cc) {
+        assert.strictEqual(aa, 'aaa');
+        assert.strictEqual(bb, 'bbb');
+        assert.strictEqual(cc, 333);
+        assert.strictEqual(this.foo, 'bar');
+        this.aa = aa
+      }
+    })
+    limon.run('aaa', 'bbb', 333);
+    assert.strictEqual(limon.one, 111);
+    assert.strictEqual(limon.aa, 'aaa');
+  });
+
   it('should decorate "use" onto the given object', function() {
     var app = {};
     use(app);
-    assert.equal(typeof app.use, 'function');
+    assert.strictEqual(typeof app.use, 'function');
   });
 
   it('should decorate "fns" onto the given object', function() {
@@ -139,12 +167,12 @@ describe('run', function() {
   it('should decorate "run" onto the given object', function() {
     var app = {};
     use(app);
-    assert.equal(typeof app.run, 'function');
+    assert.strictEqual(typeof app.run, 'function');
   });
 
   it('should return app', function() {
     var app = {};
-    assert.equal(typeof use(app), 'object');
+    assert.strictEqual(typeof use(app), 'object');
   });
 
   it('should run all plugins on "fns"', function() {
@@ -191,8 +219,8 @@ describe('run', function() {
     var foo = {};
     app.run(foo);
     assert.deepEqual(foo,  { a: 'b', c: 'd', e: 'f' });
-    assert.equal(typeof foo.use, 'function');
-    assert.equal(typeof foo.run, 'function');
+    assert.strictEqual(typeof foo.use, 'function');
+    assert.strictEqual(typeof foo.run, 'function');
     assert(Array.isArray(foo.fns));
   });
 
@@ -218,8 +246,8 @@ describe('run', function() {
     define(foo, 'use', function() {});
     app.run(foo);
     assert.deepEqual(foo,  { a: 'b', c: 'd', e: 'f' });
-    assert.equal(typeof foo.use, 'function');
-    assert.equal(typeof foo.run, 'function');
+    assert.strictEqual(typeof foo.use, 'function');
+    assert.strictEqual(typeof foo.run, 'function');
     assert(Array.isArray(foo.fns));
   });
 
@@ -245,8 +273,8 @@ describe('run', function() {
     define(foo, 'run', function() {});
     app.run(foo);
     assert.deepEqual(foo,  { a: 'b', c: 'd', e: 'f' });
-    assert.equal(typeof foo.use, 'function');
-    assert.equal(typeof foo.run, 'function');
+    assert.strictEqual(typeof foo.use, 'function');
+    assert.strictEqual(typeof foo.run, 'function');
     assert(Array.isArray(foo.fns));
   });
 
@@ -275,8 +303,53 @@ describe('run', function() {
     define(foo, 'run', function() {});
     app.run(foo);
     assert.deepEqual(foo,  { a: 'b', c: 'd', e: 'f' });
-    assert.equal(typeof foo.use, 'function');
-    assert.equal(typeof foo.run, 'function');
-    assert.equal(typeof foo.fns, 'undefined');
+    assert.strictEqual(typeof foo.use, 'function');
+    assert.strictEqual(typeof foo.run, 'function');
+    assert.strictEqual(typeof foo.fns, 'undefined');
+  });
+
+  it('should accept different number and type of arguments', function() {
+    var app = {};
+    use(app);
+    app
+      .use(function(app) {
+        this.a = 'a';
+        app.b = 'b';
+
+        // these args comes from `.run`
+        return function(str, obj, num) {
+          this.str = str;
+          app.obj = obj;
+          app.num = num;
+        }
+      })
+      .use(function(app) {
+        assert.strictEqual(this.a, 'a');
+        assert.strictEqual(app.b, 'b');
+
+        assert.strictEqual(this.str, undefined);
+        assert.strictEqual(app.str, undefined);
+
+        // these args comes from `.run`
+        return function(str, obj, num) {
+          assert.strictEqual(this.a, 'a');
+          assert.strictEqual(app.b, 'b');
+
+          assert.strictEqual(this.str, 'foo');
+          assert.strictEqual(app.str, 'foo');
+          assert.deepEqual(app.obj, { bar: 'qux' });
+
+          this.str = str + 'bar';
+          this.obj.fez = 444;
+          this.num = num - 23;
+        }
+      });
+
+    app.run('foo', { bar: 'qux' }, 123);
+    assert.strictEqual(app.a, 'a');
+    assert.strictEqual(app.b, 'b');
+    assert.strictEqual(app.str, 'foobar');
+    assert.strictEqual(app.num, 100);
+    assert.deepEqual(app.obj, { bar: 'qux', fez: 444 });
   });
 });

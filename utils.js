@@ -13,8 +13,14 @@ require('isarray', 'isArray');
 require('isobject', 'isObject');
 require = fn; // eslint-disable-line
 
-utils.isString = function(val) {
+utils.isString = function isString(val) {
   return val && typeof val === 'string';
+};
+
+utils.arrayify = function arrayify(val) {
+  if (!val) return [];
+  if (!utils.isArray(val)) return [val];
+  return val;
 };
 
 /**

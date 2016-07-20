@@ -48,6 +48,7 @@ module.exports = function base(app, opts) {
    * app.use(bar);
    * app.use(baz);
    * ```
+   *
    * @name .use
    * @param {Function} `fn` plugin function to call
    * @api public
@@ -63,25 +64,27 @@ module.exports = function base(app, opts) {
    * var config = {};
    * app.run(config);
    * ```
+   *
    * @name .run
    * @param {Object} `value` Object to be modified by plugins.
    * @return {Object} Returns the object passed to `run`
    * @api public
    */
 
-  utils.define(app, 'run', function(val) {
-    if (!utils.isObject(val)) return;
-    decorate(val);
+   utils.define(app, 'run', function run(val) {
+    if (utils.isObject(val)) {
+      decorate(arguments[0]);
+    }
 
     var self = this || app;
-    var fns = self[prop];
-    var len = fns.length;
-    var idx = -1;
+    var len = self[prop].length;
+    var i = 0;
 
-    while (++idx < len) {
-      val.use(fns[idx]);
+    while (i < len) {
+      var plugin = self[prop][i++];
+      plugin.apply(self, arguments);
     }
-    return val;
+    return self;
   });
 
   /**
@@ -95,11 +98,14 @@ module.exports = function base(app, opts) {
     }
 
     var self = this || app;
+    var params = utils.arrayify(opts.params);
+    params = params.length === 0 ? [self] : params;
+
     if (typeof opts.fn === 'function') {
       opts.fn.call(self, self, options);
     }
 
-    var plugin = fn.call(self, self);
+    var plugin = fn.apply(self, params);
     if (typeof plugin === 'function') {
       var fns = self[prop];
       fns.push(plugin);
@@ -113,7 +119,7 @@ module.exports = function base(app, opts) {
 
   function decorate(val) {
     if (!val.use || !val.run) {
-      base(val);
+      base(val, opts);
     }
   }
 
